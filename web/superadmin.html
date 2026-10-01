@@ -1,0 +1,108 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>Super Admin — Jindal Dashboard</title>
+<link rel="stylesheet" href="assets/style.css" />
+</head>
+<body>
+  <div class="app-shell">
+    <div class="sidebar">
+      <div class="brand">Jindal Health<span>Super Admin</span></div>
+      <div class="nav-item active">Access control</div>
+      <div class="spacer"></div>
+      <div class="user-chip" id="current-user-name">—</div>
+      <button class="secondary small" style="margin-top:10px;width:100%;" onclick="logout()">Sign out</button>
+    </div>
+    <div class="main">
+      <h1>Access control</h1>
+      <p class="subtitle">Adjust what each role can see and do, and create logins for people.</p>
+
+      <div class="card">
+        <h2>Roles &amp; permissions</h2>
+        <div id="roles-content">Loading…</div>
+      </div>
+
+      <div class="card" style="max-width:480px;">
+        <h2>Create a login</h2>
+        <form id="create-user-form">
+          <label for="name">Name</label>
+          <input type="text" id="name" required />
+          <label for="email">Email</label>
+          <input type="email" id="email" required />
+          <label for="password">Temporary password</label>
+          <input type="text" id="password" required />
+          <label for="roleName">Role</label>
+          <select id="roleName">
+            <option>Employee</option>
+            <option>Doctor</option>
+            <option>Admin</option>
+            <option>Super Admin</option>
+          </select>
+          <label for="linkedEmployeeId">Linked employee ID (optional)</label>
+          <input type="text" id="linkedEmployeeId" placeholder="Required for an Employee login" />
+          <button type="submit">Create login</button>
+        </form>
+        <div id="create-msg"></div>
+      </div>
+    </div>
+  </div>
+
+  <script src="assets/api.js"></script>
+  <script>
+    const session = requireRole("Super Admin");
+
+    const FLAGS = [
+      ["view_full_detail", "viewFullDetail", "View full report detail"],
+      ["view_status_only", "viewStatusOnly", "View status only"],
+      ["upload_report", "uploadReport", "Upload a report"],
+      ["oversight_search_stats_flags_reminders", "oversight", "Search / stats / flags / reminders"],
+      ["manage_admin_access", "manageAdminAccess", "Manage Admin access"],
+    ];
+
+    async function loadRoles() {
+      const { data } = await apiPost("superadmin/roles", {});
+      const rows = data.data || [];
+      const el = document.getElementById("roles-content");
+      el.innerHTML = `<table><thead><tr><th>Role</th>${FLAGS.map((f) => `<th>${f[2]}</th>`).join("")}</tr></thead><tbody>${rows
+        .map(
+          (r) =>
+            `<tr>${`<td>${r.name}</td>`}${FLAGS.map(
+              (f) => `<td><input type="checkbox" data-role="${r.name}" data-field="${f[1]}" ${r[f[0]] ? "checked" : ""} onchange="onFlagChange(this)"/></td>`
+            ).join("")}</tr>`
+        )
+        .join("")}</tbody></table>`;
+    }
+
+    async function onFlagChange(checkbox) {
+      const roleName = checkbox.dataset.role;
+      const row = document.querySelectorAll(`input[data-role="${roleName}"]`);
+      const payload = { roleName };
+      row.forEach((cb) => { payload[cb.dataset.field] = cb.checked; });
+      await apiPost("superadmin/update-role", payload);
+    }
+
+    document.getElementById("create-user-form").addEventListener("submit", async function (e) {
+      e.preventDefault();
+      const msgEl = document.getElementById("create-msg");
+      const payload = {
+        name: document.getElementById("name").value.trim(),
+        email: document.getElementById("email").value.trim(),
+        password: document.getElementById("password").value,
+        roleName: document.getElementById("roleName").value,
+        linkedEmployeeId: document.getElementById("linkedEmployeeId").value.trim(),
+      };
+      const { data } = await apiPost("create-user", payload);
+      if (data.success) {
+        msgEl.innerHTML = '<div class="msg success">Login created.</div>';
+        document.getElementById("create-user-form").reset();
+      } else {
+        msgEl.innerHTML = `<div class="msg error">${data.message || "Could not create login."}</div>`;
+      }
+    });
+
+    if (session) loadRoles();
+  </script>
+</body>
+</html>

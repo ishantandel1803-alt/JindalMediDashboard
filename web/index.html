@@ -1,0 +1,44 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>Jindal Health Dashboard — Sign in</title>
+<link rel="stylesheet" href="assets/style.css" />
+</head>
+<body>
+  <div class="login-shell">
+    <div class="login-box">
+      <h1>Jindal Employee Health Dashboard</h1>
+      <p class="subtitle" style="margin-bottom:20px;">Sign in to continue</p>
+      <form id="login-form">
+        <label for="email">Email</label>
+        <input type="email" id="email" required autocomplete="username" />
+        <label for="password">Password</label>
+        <input type="password" id="password" required autocomplete="current-password" />
+        <button type="submit" style="width:100%;">Sign in</button>
+      </form>
+      <div id="msg"></div>
+    </div>
+  </div>
+
+  <script src="assets/api.js"></script>
+  <script>
+    document.getElementById("login-form").addEventListener("submit", async function (e) {
+      e.preventDefault();
+      const email = document.getElementById("email").value.trim();
+      const password = document.getElementById("password").value;
+      const msgEl = document.getElementById("msg");
+      msgEl.innerHTML = "";
+
+      const { data } = await apiPost("login", { email, password });
+      if (data.success) {
+        saveSession(data.user, data.permissions);
+        window.location.href = pageForRole(data.user.role);
+      } else {
+        msgEl.innerHTML = `<div class="msg error">${data.message || "Sign in failed."}</div>`;
+      }
+    });
+  </script>
+</body>
+</html>

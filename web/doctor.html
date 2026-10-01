@@ -1,0 +1,103 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>Upload Report — Jindal Dashboard</title>
+<link rel="stylesheet" href="assets/style.css" />
+</head>
+<body>
+  <div class="app-shell">
+    <div class="sidebar">
+      <div class="brand">Jindal Health<span>Doctor</span></div>
+      <div class="nav-item active">Upload Report</div>
+      <div class="spacer"></div>
+      <div class="user-chip" id="current-user-name">—</div>
+      <button class="secondary small" style="margin-top:10px;width:100%;" onclick="logout()">Sign out</button>
+    </div>
+    <div class="main">
+      <h1>Upload a checkup report</h1>
+      <p class="subtitle">Record findings for an employee's checkup. Status is set from what you enter below.</p>
+
+      <div class="card" style="max-width:560px;">
+        <form id="upload-form">
+          <label for="employeeId">Employee ID</label>
+          <input type="text" id="employeeId" required placeholder="e.g. 1" />
+
+          <label for="appointmentId">Appointment ID (optional)</label>
+          <input type="text" id="appointmentId" placeholder="Leave blank if there is none" />
+
+          <label for="checkupDate">Checkup date</label>
+          <input type="date" id="checkupDate" required />
+
+          <label for="status">Status</label>
+          <select id="status">
+            <option value="normal">Normal</option>
+            <option value="flagged">Flagged for follow-up</option>
+          </select>
+
+          <label for="fullReportDetail">Findings</label>
+          <textarea id="fullReportDetail" rows="4" placeholder="Summary of findings"></textarea>
+
+          <label for="doctorNotes">Notes (optional)</label>
+          <textarea id="doctorNotes" rows="2"></textarea>
+
+          <label for="file">Report file (optional)</label>
+          <input type="file" id="file" />
+
+          <button type="submit">Submit report</button>
+        </form>
+        <div id="msg"></div>
+      </div>
+    </div>
+  </div>
+
+  <script src="assets/api.js"></script>
+  <script>
+    const session = requireRole("Doctor");
+
+    function fileToBase64(file) {
+      return new Promise((resolve, reject) => {
+        const reader = new FileReader();
+        reader.onload = () => resolve(reader.result.split(",")[1]);
+        reader.onerror = reject;
+        reader.readAsDataURL(file);
+      });
+    }
+
+    document.getElementById("upload-form").addEventListener("submit", async function (e) {
+      e.preventDefault();
+      const msgEl = document.getElementById("msg");
+      msgEl.innerHTML = "";
+
+      const fileInput = document.getElementById("file");
+      let fileBase64 = "";
+      let fileName = "";
+      if (fileInput.files.length > 0) {
+        fileBase64 = await fileToBase64(fileInput.files[0]);
+        fileName = fileInput.files[0].name;
+      }
+
+      const payload = {
+        employeeId: document.getElementById("employeeId").value.trim(),
+        doctorId: session.user.id,
+        appointmentId: document.getElementById("appointmentId").value.trim(),
+        checkupDate: document.getElementById("checkupDate").value,
+        status: document.getElementById("status").value,
+        fullReportDetail: document.getElementById("fullReportDetail").value,
+        doctorNotes: document.getElementById("doctorNotes").value,
+        fileBase64,
+        fileName,
+      };
+
+      const { data } = await apiPost("doctor/upload-report", payload);
+      if (data.success) {
+        msgEl.innerHTML = '<div class="msg success">Report submitted.</div>';
+        document.getElementById("upload-form").reset();
+      } else {
+        msgEl.innerHTML = `<div class="msg error">${data.message || "Something went wrong."}</div>`;
+      }
+    });
+  </script>
+</body>
+</html>

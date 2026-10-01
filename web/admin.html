@@ -1,0 +1,138 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>Admin — Jindal Dashboard</title>
+<link rel="stylesheet" href="assets/style.css" />
+</head>
+<body>
+  <div class="app-shell">
+    <div class="sidebar">
+      <div class="brand">Jindal Health<span>Admin</span></div>
+      <div class="nav-item active">Overview</div>
+      <div class="spacer"></div>
+      <div class="user-chip" id="current-user-name">—</div>
+      <button class="secondary small" style="margin-top:10px;width:100%;" onclick="logout()">Sign out</button>
+    </div>
+    <div class="main">
+      <h1>Admin overview</h1>
+      <p class="subtitle">Company-wide compliance stats, flagged results, missed checkups, and the tracker board.</p>
+
+      <div class="stat-row" id="stats-row">
+        <div class="stat-tile"><div class="num">—</div><div class="label">Employees</div></div>
+        <div class="stat-tile"><div class="num">—</div><div class="label">Normal reports</div></div>
+        <div class="stat-tile"><div class="num">—</div><div class="label">Flagged reports</div></div>
+        <div class="stat-tile"><div class="num">—</div><div class="label">Missed checkups</div></div>
+      </div>
+
+      <div class="card">
+        <h2>Search employees</h2>
+        <input type="text" id="search-input" placeholder="Search by name or department…" />
+        <div id="search-results" style="margin-top:14px;"></div>
+      </div>
+
+      <div class="card">
+        <h2>Flagged reports</h2>
+        <div id="flagged-content">Loading…</div>
+      </div>
+
+      <div class="card">
+        <h2>Missed checkups</h2>
+        <div id="missed-content">Loading…</div>
+      </div>
+
+      <div class="card">
+        <h2>Tracker board</h2>
+        <div id="tracker-content">Loading…</div>
+      </div>
+    </div>
+  </div>
+
+  <script src="assets/api.js"></script>
+  <script>
+    const session = requireRole("Admin");
+
+    async function loadStats() {
+      const { data } = await apiPost("admin/stats", {});
+      const row = document.getElementById("stats-row");
+      row.innerHTML = `
+        <div class="stat-tile"><div class="num">${data.totalEmployees ?? "—"}</div><div class="label">Employees</div></div>
+        <div class="stat-tile"><div class="num">${data.normalReports ?? "—"}</div><div class="label">Normal reports</div></div>
+        <div class="stat-tile"><div class="num">${data.flaggedReports ?? "—"}</div><div class="label">Flagged reports</div></div>
+        <div class="stat-tile"><div class="num">${data.missedAppointments ?? "—"}</div><div class="label">Missed checkups</div></div>`;
+    }
+
+    async function runSearch(q) {
+      const el = document.getElementById("search-results");
+      if (!q) { el.innerHTML = ""; return; }
+      const { data } = await apiPost("admin/search", { q });
+      const rows = data.data || [];
+      if (rows.length === 0) { el.innerHTML = '<p class="empty-note">No matches.</p>'; return; }
+      el.innerHTML = `<table><thead><tr><th>Name</th><th>Department</th><th>Job title</th><th>Next due</th></tr></thead><tbody>${rows
+        .map((r) => `<tr><td>${r.name}</td><td>${r.department || "—"}</td><td>${r.job_title || "—"}</td><td>${r.next_checkup_due || "—"}</td></tr>`)
+        .join("")}</tbody></table>`;
+    }
+
+    let searchTimer;
+    document.getElementById("search-input").addEventListener("input", (e) => {
+      clearTimeout(searchTimer);
+      const q = e.target.value.trim();
+      searchTimer = setTimeout(() => runSearch(q), 300);
+    });
+
+    async function sendReminder(employeeId, btn) {
+      btn.disabled = true;
+      btn.textContent = "Sending…";
+      const { data } = await apiPost("admin/send-reminder", { employeeId });
+      btn.textContent = data.success ? "Sent" : "Failed";
+    }
+
+    async function loadFlagged() {
+      const { data } = await apiPost("admin/flagged", {});
+      const el = document.getElementById("flagged-content");
+      const rows = data.data || [];
+      if (rows.length === 0) { el.innerHTML = '<p class="empty-note">Nothing flagged right now.</p>'; return; }
+      el.innerHTML = `<table><thead><tr><th>Employee</th><th>Department</th><th>Checkup date</th><th>Findings</th></tr></thead><tbody>${rows
+        .map((r) => `<tr><td>${r.employeeName}</td><td>${r.department || "—"}</td><td>${r.checkupDate || "—"}</td><td>${r.fullReportDetail || "—"}</td></tr>`)
+        .join("")}</tbody></table>`;
+    }
+
+    async function loadMissed() {
+      const { data } = await apiPost("admin/missed", {});
+      const el = document.getElementById("missed-content");
+      const rows = data.data || [];
+      if (rows.length === 0) { el.innerHTML = '<p class="empty-note">No missed checkups right now.</p>'; return; }
+      el.innerHTML = `<table><thead><tr><th>Employee</th><th>Department</th><th>Due date</th><th></th></tr></thead><tbody>${rows
+        .map(
+          (r) =>
+            `<tr><td>${r.employeeName}</td><td>${r.department || "—"}</td><td>${r.date || "—"}</td><td><button class="small" onclick="sendReminder('${r.employeeId}', this)">Send reminder</button></td></tr>`
+        )
+        .join("")}</tbody></table>`;
+    }
+
+    async function loadTracker() {
+      const { data } = await apiPost("admin/tracker-board", {});
+      const el = document.getElementById("tracker-content");
+      const cols = data.columns || {};
+      const labels = { flagged: "Flagged", missed: "Missed", scheduled: "Scheduled", normal: "Normal", noRecord: "No record" };
+      el.innerHTML = `<div class="tracker-columns">${Object.keys(labels)
+        .map((key) => {
+          const items = cols[key] || [];
+          return `<div class="tracker-col"><h3>${labels[key]} (${items.length})</h3>${
+            items.map((c) => `<div class="tracker-card">${c.employeeName}<div class="dept">${c.department || ""}</div></div>`).join("") ||
+            '<p class="empty-note" style="padding:0;">—</p>'
+          }</div>`;
+        })
+        .join("")}</div>`;
+    }
+
+    if (session) {
+      loadStats();
+      loadFlagged();
+      loadMissed();
+      loadTracker();
+    }
+  </script>
+</body>
+</html>

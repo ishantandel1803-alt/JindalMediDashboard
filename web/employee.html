@@ -1,0 +1,108 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>My Health — Jindal Dashboard</title>
+<link rel="stylesheet" href="assets/style.css" />
+</head>
+<body>
+  <div class="app-shell">
+    <div class="sidebar">
+      <div class="brand">Jindal Health<span>Employee</span></div>
+      <div class="nav-item active">My Health</div>
+      <div class="spacer"></div>
+      <div class="user-chip" id="current-user-name">—</div>
+      <button class="secondary small" style="margin-top:10px;width:100%;" onclick="logout()">Sign out</button>
+    </div>
+    <div class="main">
+      <h1>My Health</h1>
+      <p class="subtitle">Your profile, upcoming appointments, and past checkup reports.</p>
+
+      <div class="card">
+        <h2>Profile</h2>
+        <div id="profile-content">Loading…</div>
+      </div>
+
+      <div class="card">
+        <h2>Upcoming &amp; past appointments</h2>
+        <div id="appointments-content">Loading…</div>
+      </div>
+
+      <div class="card">
+        <h2>My reports</h2>
+        <div id="reports-content">Loading…</div>
+      </div>
+    </div>
+  </div>
+
+  <script src="assets/api.js"></script>
+  <script>
+    const session = requireRole("Employee");
+
+    function statusBadge(status) {
+      if (status === "flagged") return '<span class="badge danger">Flagged</span>';
+      if (status === "normal") return '<span class="badge ok">Normal</span>';
+      if (status === "missed") return '<span class="badge danger">Missed</span>';
+      if (status === "scheduled") return '<span class="badge warn">Scheduled</span>';
+      if (status === "completed") return '<span class="badge ok">Completed</span>';
+      return `<span class="badge neutral">${status || "No record"}</span>`;
+    }
+
+    async function loadProfile() {
+      const { data } = await apiPost("employee/profile", { employeeId: session.user.linkedEmployeeId });
+      const el = document.getElementById("profile-content");
+      if (!data.success || !data.data) {
+        el.innerHTML = '<p class="empty-note">No employee profile is linked to this login yet. Ask your Admin to link your account.</p>';
+        return;
+      }
+      const p = data.data;
+      el.innerHTML = `
+        <table>
+          <tr><th>Name</th><td>${p.name || "—"}</td></tr>
+          <tr><th>Department</th><td>${p.department || "—"}</td></tr>
+          <tr><th>Job title</th><td>${p.jobTitle || "—"}</td></tr>
+          <tr><th>Next checkup due</th><td>${p.nextCheckupDue || "—"}</td></tr>
+          <tr><th>Latest status</th><td>${statusBadge(p.latestStatus)}</td></tr>
+        </table>`;
+    }
+
+    async function loadAppointments() {
+      const { data } = await apiPost("employee/appointments", { employeeId: session.user.linkedEmployeeId });
+      const el = document.getElementById("appointments-content");
+      const rows = data.data || [];
+      if (rows.length === 0) {
+        el.innerHTML = '<p class="empty-note">No appointments on record.</p>';
+        return;
+      }
+      el.innerHTML = `<table><thead><tr><th>Date</th><th>Purpose</th><th>Status</th></tr></thead><tbody>${rows
+        .map((r) => `<tr><td>${r.date || "—"}</td><td>${r.purpose || "—"}</td><td>${statusBadge(r.status)}</td></tr>`)
+        .join("")}</tbody></table>`;
+    }
+
+    async function loadReports() {
+      const { data } = await apiPost("employee/reports", { employeeId: session.user.linkedEmployeeId });
+      const el = document.getElementById("reports-content");
+      const rows = data.data || [];
+      if (rows.length === 0) {
+        el.innerHTML = '<p class="empty-note">No reports on record yet.</p>';
+        return;
+      }
+      el.innerHTML = `<table><thead><tr><th>Checkup date</th><th>Status</th><th>Findings</th><th>File</th></tr></thead><tbody>${rows
+        .map(
+          (r) =>
+            `<tr><td>${r.checkup_date || "—"}</td><td>${statusBadge(r.status)}</td><td>${r.full_report_detail || "—"}</td><td>${
+              r.file_link ? `<a href="${r.file_link}" target="_blank" rel="noopener">View</a>` : "—"
+            }</td></tr>`
+        )
+        .join("")}</tbody></table>`;
+    }
+
+    if (session) {
+      loadProfile();
+      loadAppointments();
+      loadReports();
+    }
+  </script>
+</body>
+</html>
