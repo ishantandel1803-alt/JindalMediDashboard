@@ -26,6 +26,24 @@
         <div class="stat-tile"><div class="num">—</div><div class="label">Missed checkups</div></div>
       </div>
 
+      <div class="card" style="max-width:560px;">
+        <h2>Add employee</h2>
+        <form id="add-employee-form">
+          <label for="emp-name">Name</label>
+          <input type="text" id="emp-name" required />
+          <label for="emp-email">Email</label>
+          <input type="email" id="emp-email" />
+          <label for="emp-department">Department</label>
+          <input type="text" id="emp-department" />
+          <label for="emp-jobTitle">Job title</label>
+          <input type="text" id="emp-jobTitle" />
+          <label for="emp-nextCheckupDue">Next checkup due</label>
+          <input type="date" id="emp-nextCheckupDue" />
+          <button type="submit">Add employee</button>
+        </form>
+        <div id="add-employee-msg"></div>
+      </div>
+
       <div class="card">
         <h2>Search employees</h2>
         <input type="text" id="search-input" placeholder="Search by name or department…" />
@@ -73,6 +91,27 @@
         .map((r) => `<tr><td>${r.name}</td><td>${r.department || "—"}</td><td>${r.job_title || "—"}</td><td>${r.next_checkup_due || "—"}</td></tr>`)
         .join("")}</tbody></table>`;
     }
+
+    document.getElementById("add-employee-form").addEventListener("submit", async function (e) {
+      e.preventDefault();
+      const msgEl = document.getElementById("add-employee-msg");
+      msgEl.innerHTML = "";
+      const payload = {
+        name: document.getElementById("emp-name").value.trim(),
+        email: document.getElementById("emp-email").value.trim(),
+        department: document.getElementById("emp-department").value.trim(),
+        jobTitle: document.getElementById("emp-jobTitle").value.trim(),
+        nextCheckupDue: document.getElementById("emp-nextCheckupDue").value,
+      };
+      const { data } = await apiPost("admin/create-employee", payload);
+      if (data.success) {
+        msgEl.innerHTML = `<div class="msg success">Employee added (ID ${data.employeeId}). Use this ID when creating their login.</div>`;
+        document.getElementById("add-employee-form").reset();
+        loadStats();
+      } else {
+        msgEl.innerHTML = `<div class="msg error">${data.message || "Could not add employee."}</div>`;
+      }
+    });
 
     let searchTimer;
     document.getElementById("search-input").addEventListener("input", (e) => {
