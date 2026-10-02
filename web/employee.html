@@ -88,10 +88,12 @@
         el.innerHTML = '<p class="empty-note">No reports on record yet.</p>';
         return;
       }
-      el.innerHTML = `<table><thead><tr><th>Checkup date</th><th>Status</th><th>Findings</th><th>File</th></tr></thead><tbody>${rows
+      el.innerHTML = `<table><thead><tr><th>Checkup date</th><th>Status</th><th>Findings</th><th>AI insight</th><th>File</th></tr></thead><tbody>${rows
         .map(
           (r) =>
-            `<tr><td>${r.checkup_date || "—"}</td><td>${statusBadge(r.status)}</td><td>${r.full_report_detail || "—"}</td><td>${
+            `<tr><td>${r.checkup_date || "—"}</td><td>${statusBadge(r.status)}</td><td>${r.full_report_detail || "—"}</td><td style="white-space:pre-line;">${
+              r.ai_analysis || "<span class=\"empty-note\" style=\"padding:0;\">Not available</span>"
+            }</td><td>${
               r.file_link ? `<a href="${r.file_link}" target="_blank" rel="noopener">View</a>` : "—"
             }</td></tr>`
         )
