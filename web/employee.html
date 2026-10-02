@@ -33,6 +33,33 @@
         <h2>My reports</h2>
         <div id="reports-content">Loading…</div>
       </div>
+
+      <div class="card" style="max-width:560px;">
+        <h2>Upload a report</h2>
+        <p class="subtitle" style="margin-bottom:14px;">Got a result from an external lab or clinic? Add it here. It won't be marked as doctor-verified until reviewed.</p>
+        <form id="self-upload-form">
+          <label for="su-checkupDate">Checkup date</label>
+          <input type="date" id="su-checkupDate" required />
+
+          <label for="su-status">Status</label>
+          <select id="su-status">
+            <option value="normal">Normal</option>
+            <option value="flagged">Flagged for follow-up</option>
+          </select>
+
+          <label for="su-fullReportDetail">Findings</label>
+          <textarea id="su-fullReportDetail" rows="4" placeholder="Summary of findings"></textarea>
+
+          <label for="su-notes">Notes (optional)</label>
+          <textarea id="su-notes" rows="2"></textarea>
+
+          <label for="su-file">Report file (optional)</label>
+          <input type="file" id="su-file" />
+
+          <button type="submit">Submit report</button>
+        </form>
+        <div id="self-upload-msg"></div>
+      </div>
     </div>
   </div>
 
@@ -88,10 +115,14 @@
         el.innerHTML = '<p class="empty-note">No reports on record yet.</p>';
         return;
       }
-      el.innerHTML = `<table><thead><tr><th>Checkup date</th><th>Status</th><th>Findings</th><th>AI insight</th><th>File</th></tr></thead><tbody>${rows
+      el.innerHTML = `<table><thead><tr><th>Checkup date</th><th>Source</th><th>Status</th><th>Findings</th><th>AI insight</th><th>File</th></tr></thead><tbody>${rows
         .map(
           (r) =>
-            `<tr><td>${r.checkup_date || "—"}</td><td>${statusBadge(r.status)}</td><td>${r.full_report_detail || "—"}</td><td style="white-space:pre-line;">${
+            `<tr><td>${r.checkup_date || "—"}</td><td>${
+              r.uploaded_by_role === "Employee"
+                ? '<span class="badge warn">Self-reported</span>'
+                : '<span class="badge ok">Doctor</span>'
+            }</td><td>${statusBadge(r.status)}</td><td>${r.full_report_detail || "—"}</td><td style="white-space:pre-line;">${
               r.ai_analysis || "<span class=\"empty-note\" style=\"padding:0;\">Not available</span>"
             }</td><td>${
               r.file_link ? `<a href="${r.file_link}" target="_blank" rel="noopener">View</a>` : "—"
@@ -99,6 +130,49 @@
         )
         .join("")}</tbody></table>`;
     }
+
+    function fileToBase64(file) {
+      return new Promise((resolve, reject) => {
+        const reader = new FileReader();
+        reader.onload = () => resolve(reader.result.split(",")[1]);
+        reader.onerror = reject;
+        reader.readAsDataURL(file);
+      });
+    }
+
+    document.getElementById("self-upload-form").addEventListener("submit", async function (e) {
+      e.preventDefault();
+      const msgEl = document.getElementById("self-upload-msg");
+      msgEl.innerHTML = "";
+
+      const fileInput = document.getElementById("su-file");
+      let fileBase64 = "";
+      let fileName = "";
+      if (fileInput.files.length > 0) {
+        fileBase64 = await fileToBase64(fileInput.files[0]);
+        fileName = fileInput.files[0].name;
+      }
+
+      const payload = {
+        employeeId: session.user.linkedEmployeeId,
+        checkupDate: document.getElementById("su-checkupDate").value,
+        status: document.getElementById("su-status").value,
+        fullReportDetail: document.getElementById("su-fullReportDetail").value,
+        notes: document.getElementById("su-notes").value,
+        fileBase64,
+        fileName,
+      };
+
+      const { data } = await apiPost("employee/upload-report", payload);
+      if (data.success) {
+        msgEl.innerHTML = '<div class="msg success">Report submitted.</div>';
+        document.getElementById("self-upload-form").reset();
+        loadReports();
+        loadProfile();
+      } else {
+        msgEl.innerHTML = `<div class="msg error">${data.message || "Something went wrong."}</div>`;
+      }
+    });
 
     if (session) {
       loadProfile();

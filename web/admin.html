@@ -132,8 +132,13 @@
       const el = document.getElementById("flagged-content");
       const rows = data.data || [];
       if (rows.length === 0) { el.innerHTML = '<p class="empty-note">Nothing flagged right now.</p>'; return; }
-      el.innerHTML = `<table><thead><tr><th>Employee</th><th>Department</th><th>Checkup date</th><th>Findings</th></tr></thead><tbody>${rows
-        .map((r) => `<tr><td>${r.employeeName}</td><td>${r.department || "—"}</td><td>${r.checkupDate || "—"}</td><td>${r.fullReportDetail || "—"}</td></tr>`)
+      el.innerHTML = `<table><thead><tr><th>Employee</th><th>Department</th><th>Source</th><th>Checkup date</th><th>Findings</th></tr></thead><tbody>${rows
+        .map(
+          (r) =>
+            `<tr><td>${r.employeeName}</td><td>${r.department || "—"}</td><td>${
+              r.uploadedByRole === "Employee" ? '<span class="badge warn">Self-reported</span>' : '<span class="badge ok">Doctor</span>'
+            }</td><td>${r.checkupDate || "—"}</td><td>${r.fullReportDetail || "—"}</td></tr>`
+        )
         .join("")}</tbody></table>`;
     }
 
