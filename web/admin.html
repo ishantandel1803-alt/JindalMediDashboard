@@ -29,15 +29,11 @@
       <div class="card" style="max-width:560px;">
         <h2>Add employee</h2>
         <form id="add-employee-form">
+          <label for="emp-companyId">Company ID</label>
+          <input type="text" id="emp-companyId" required />
           <label for="emp-name">Name</label>
           <input type="text" id="emp-name" required />
-          <label for="emp-email">Email</label>
-          <input type="email" id="emp-email" />
-          <label for="emp-department">Department</label>
-          <input type="text" id="emp-department" />
-          <label for="emp-jobTitle">Job title</label>
-          <input type="text" id="emp-jobTitle" />
-          <label for="emp-nextCheckupDue">Next checkup due</label>
+          <label for="emp-nextCheckupDue">Next checkup due (optional)</label>
           <input type="date" id="emp-nextCheckupDue" />
           <button type="submit">Add employee</button>
         </form>
@@ -46,7 +42,7 @@
 
       <div class="card">
         <h2>Search employees</h2>
-        <input type="text" id="search-input" placeholder="Search by name or department…" />
+        <input type="text" id="search-input" placeholder="Search by name or Company ID…" />
         <div id="search-results" style="margin-top:14px;"></div>
       </div>
 
@@ -87,8 +83,8 @@
       const { data } = await apiPost("admin/search", { q });
       const rows = data.data || [];
       if (rows.length === 0) { el.innerHTML = '<p class="empty-note">No matches.</p>'; return; }
-      el.innerHTML = `<table><thead><tr><th>Name</th><th>Department</th><th>Job title</th><th>Next due</th></tr></thead><tbody>${rows
-        .map((r) => `<tr><td>${r.name}</td><td>${r.department || "—"}</td><td>${r.job_title || "—"}</td><td>${r.next_checkup_due || "—"}</td></tr>`)
+      el.innerHTML = `<table><thead><tr><th>Name</th><th>Company ID</th><th>Next due</th></tr></thead><tbody>${rows
+        .map((r) => `<tr><td>${r.name}</td><td>${r.company_id || "—"}</td><td>${r.next_checkup_due || "—"}</td></tr>`)
         .join("")}</tbody></table>`;
     }
 
@@ -98,9 +94,7 @@
       msgEl.innerHTML = "";
       const payload = {
         name: document.getElementById("emp-name").value.trim(),
-        email: document.getElementById("emp-email").value.trim(),
-        department: document.getElementById("emp-department").value.trim(),
-        jobTitle: document.getElementById("emp-jobTitle").value.trim(),
+        companyId: document.getElementById("emp-companyId").value.trim(),
         nextCheckupDue: document.getElementById("emp-nextCheckupDue").value,
       };
       const { data } = await apiPost("admin/create-employee", payload);
@@ -132,10 +126,10 @@
       const el = document.getElementById("flagged-content");
       const rows = data.data || [];
       if (rows.length === 0) { el.innerHTML = '<p class="empty-note">Nothing flagged right now.</p>'; return; }
-      el.innerHTML = `<table><thead><tr><th>Employee</th><th>Department</th><th>Source</th><th>Checkup date</th><th>Findings</th></tr></thead><tbody>${rows
+      el.innerHTML = `<table><thead><tr><th>Employee</th><th>Company ID</th><th>Source</th><th>Checkup date</th><th>Findings</th></tr></thead><tbody>${rows
         .map(
           (r) =>
-            `<tr><td>${r.employeeName}</td><td>${r.department || "—"}</td><td>${
+            `<tr><td>${r.employeeName}</td><td>${r.companyId || "—"}</td><td>${
               r.uploadedByRole === "Employee" ? '<span class="badge warn">Self-reported</span>' : '<span class="badge ok">Doctor</span>'
             }</td><td>${r.checkupDate || "—"}</td><td>${r.fullReportDetail || "—"}</td></tr>`
         )
@@ -147,10 +141,10 @@
       const el = document.getElementById("missed-content");
       const rows = data.data || [];
       if (rows.length === 0) { el.innerHTML = '<p class="empty-note">No missed checkups right now.</p>'; return; }
-      el.innerHTML = `<table><thead><tr><th>Employee</th><th>Department</th><th>Due date</th><th></th></tr></thead><tbody>${rows
+      el.innerHTML = `<table><thead><tr><th>Employee</th><th>Company ID</th><th>Due date</th><th></th></tr></thead><tbody>${rows
         .map(
           (r) =>
-            `<tr><td>${r.employeeName}</td><td>${r.department || "—"}</td><td>${r.date || "—"}</td><td><button class="small" onclick="sendReminder('${r.employeeId}', this)">Send reminder</button></td></tr>`
+            `<tr><td>${r.employeeName}</td><td>${r.companyId || "—"}</td><td>${r.date || "—"}</td><td><button class="small" onclick="sendReminder('${r.employeeId}', this)">Send reminder</button></td></tr>`
         )
         .join("")}</tbody></table>`;
     }

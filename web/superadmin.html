@@ -29,8 +29,8 @@
         <form id="create-user-form">
           <label for="name">Name</label>
           <input type="text" id="name" required />
-          <label for="email">Email</label>
-          <input type="email" id="email" required />
+          <label for="companyId">Company ID</label>
+          <input type="text" id="companyId" required />
           <label for="password">Temporary password</label>
           <input type="text" id="password" required />
           <label for="roleName">Role</label>
@@ -88,7 +88,7 @@
       const msgEl = document.getElementById("create-msg");
       const payload = {
         name: document.getElementById("name").value.trim(),
-        email: document.getElementById("email").value.trim(),
+        companyId: document.getElementById("companyId").value.trim(),
         password: document.getElementById("password").value,
         roleName: document.getElementById("roleName").value,
         linkedEmployeeId: document.getElementById("linkedEmployeeId").value.trim(),

@@ -87,8 +87,7 @@
       el.innerHTML = `
         <table>
           <tr><th>Name</th><td>${p.name || "—"}</td></tr>
-          <tr><th>Department</th><td>${p.department || "—"}</td></tr>
-          <tr><th>Job title</th><td>${p.jobTitle || "—"}</td></tr>
+          <tr><th>Company ID</th><td>${p.companyId || "—"}</td></tr>
           <tr><th>Next checkup due</th><td>${p.nextCheckupDue || "—"}</td></tr>
           <tr><th>Latest status</th><td>${statusBadge(p.latestStatus)}</td></tr>
         </table>`;
